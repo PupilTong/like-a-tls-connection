@@ -1,0 +1,28 @@
+{
+  "name": "like-a-tls-connection",
+  "version": "0.0.0",
+  "description": " a fake tls connection layer with real tls behavior",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PupilTong/like-a-tls-connection.git"
+  },
+  "keywords": [
+    "tls",
+    "obfs",
+    "tunnel"
+  ],
+  "author": "pupiltong",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/PupilTong/like-a-tls-connection/issues"
+  },
+  "homepage": "https://github.com/PupilTong/like-a-tls-connection#readme",
+  "devDependencies": {
+    "@types/node": "^17.0.21",
+    "@types/node-forge": "^1.0.1"
+  }
+}
