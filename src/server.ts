@@ -1,5 +1,3 @@
-import { networkInterfaces } from "os";
-import { Duplex } from "stream";
 import {TLSSocket, createSecureContext} from 'tls'
 import {createServer as createTcpServer,createConnection as createTcpConn} from 'net'
 import { PassThrough } from "stream";
