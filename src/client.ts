@@ -2,8 +2,7 @@ import * as tls from 'tls'
 import * as tcp from 'net'
 import { Transform } from 'stream';
 import log from 'standard-log'
-import { readFile } from 'fs/promises';
-import { readFileSync, stat } from 'fs';
+import { likeARealTlsOption } from '.';
 import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 const logger = log.getLogger('client');
 const debug = true;
@@ -21,21 +20,11 @@ const remoteTcpSocket = tcp.connect({
 //     fakeDomain: "www.apple.com",
 //     ALPN: ['h2', 'http/1.1']
 // }
-interface fakeTlsOption {
-    tcpSocket: tcp.Socket,
-    oneTimeEncryptKey: string,
-    ivLength: number,
-    algthroim: string,
-    tlsApplicationDataHeader:string,
-    fakeDomain:string,
-    fakeALPN: string[],
-    ca:Buffer
-}
 
 
 
 //'chacha20-poly1305'
-const createRealTlsClient = function (host:string,port:number,options:fakeTlsOption) : tls.TLSSocket {
+const createLikeARealTlsClient = function (host:string,port:number,options:likeARealTlsOption) : tls.TLSSocket {
     const algthroim = options.algthroim;
     const oneTimeEncryptKey = options.oneTimeEncryptKey;
     const ivLength = options.ivLength;
@@ -55,10 +44,14 @@ const createRealTlsClient = function (host:string,port:number,options:fakeTlsOpt
     // create a pipe for the fake socket
     const fakeTcpPipe = new Transform();
     fakeTcpPipe._transform = (chunk, encoding, cb) => {
-        tcpSocket.write(chunk, encoding, cb);
+        if(status == connectionStatues.connectingFake){
+            tcpSocket.write(chunk, encoding, cb);
+        }
     }
     const fakeTcpPipeEmitter = (data:Buffer) => {
-        fakeTcpPipe.emit('data', data);
+        if(status == connectionStatues.connectingFake){
+            fakeTcpPipe.emit('data', data);
+        }
     }
     tcpSocket.on('data', fakeTcpPipeEmitter);
     //-----------------------------------------------------
@@ -79,21 +72,22 @@ const createRealTlsClient = function (host:string,port:number,options:fakeTlsOpt
         const tlsHandshakeTransformer = new Transform();
         tlsHandshakeTransformer._transform = (chunk, encoding, cb) => {
             //do replace
-            if (status == connectionStatues.handshaking) {
+            if (status === connectionStatues.handshaking) {
                 const iv = randomBytes(options.ivLength);
                 const encryption = createCipheriv(algthroim, oneTimeEncryptKey, iv);
                 encryption.on('data', (data) => {
                     const encryptedData = Buffer.concat([tlsApplicationDataHeader, iv, data]);
                     tcpSocket.write(encryptedData, encoding, cb);
                 })
+                encryption.write(chunk,encoding,cb);
             }
-            else {
+            else if(status === connectionStatues.connected) {
                 tcpSocket.write(chunk, encoding, cb);
             }
         }
         tcpSocket.on('data', (data) => {
             //replace back 
-            if (status == connectionStatues.handshaking) {
+            if (status === connectionStatues.handshaking) {
                 const iv = data.subarray(tlsApplicationDataHeader.length + 1, tlsApplicationDataHeader.length + ivLength);
                 const decryption = createDecipheriv(algthroim, oneTimeEncryptKey, iv);
                 decryption.on('data', (decryptedData) => {
@@ -101,7 +95,7 @@ const createRealTlsClient = function (host:string,port:number,options:fakeTlsOpt
                 })
                 decryption.write(data.subarray(tlsApplicationDataHeader.length + ivLength + 1, data.length));
             }
-            else {
+            else if(status === connectionStatues.connected) {
                 tlsHandshakeTransformer.emit('data', data);
             }
         })
@@ -114,6 +108,7 @@ const createRealTlsClient = function (host:string,port:number,options:fakeTlsOpt
             //do nothing;
         }
         tcpSocket.removeListener('data',fakeTcpPipeEmitter);
+        fakeTlsSocket.destroy();
         fakeTcpPipe.destroy();
         
         const realTlsSocket:tls.TLSSocket = tls.connect({
@@ -136,4 +131,4 @@ const createRealTlsClient = function (host:string,port:number,options:fakeTlsOpt
     throw `failed to create the tls socket`
 }
 
-export {createRealTlsClient,fakeTlsOption}
+export {createLikeARealTlsClient}
