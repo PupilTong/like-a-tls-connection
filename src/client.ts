@@ -1,31 +1,13 @@
 import * as tls from 'tls'
-import * as tcp from 'net'
 import { Transform } from 'stream';
 import log from 'standard-log'
-import { likeARealTlsOption } from '.';
+import { likeARealTlsOption } from './options';
 import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 const logger = log.getLogger('client');
 const debug = true;
-// const remoteAddr = "127.0.0.1"
-const remoteAddr = "www.apple.com"
-const remoteTcpSocket = tcp.connect({
-    host: remoteAddr,
-    port: 443,
-}, () => {
-})
-// const ca = readFileSync('dist/cert/ca.crt');
-// const randomKey = "something";
-
-// const fakeClientInfo = {
-//     fakeDomain: "www.apple.com",
-//     ALPN: ['h2', 'http/1.1']
-// }
-
-
-
 //'chacha20-poly1305'
-const createLikeARealTlsClient = function (host:string,port:number,options:likeARealTlsOption) : tls.TLSSocket {
-    const algthroim = options.algthroim;
+const createLikeARealTlsClient = function (options:likeARealTlsOption) : tls.TLSSocket {
+    const algorithm = options.algorithm;
     const oneTimeEncryptKey = options.oneTimeEncryptKey;
     const ivLength = options.ivLength;
     const tcpSocket = options.tcpSocket;
@@ -74,9 +56,10 @@ const createLikeARealTlsClient = function (host:string,port:number,options:likeA
             //do replace
             if (status === connectionStatues.handshaking) {
                 const iv = randomBytes(options.ivLength);
-                const encryption = createCipheriv(algthroim, oneTimeEncryptKey, iv);
+                const encryption = createCipheriv(algorithm, oneTimeEncryptKey, iv);
                 encryption.on('data', (data) => {
-                    const encryptedData = Buffer.concat([tlsApplicationDataHeader, iv, data]);
+                    const applicationDataLength = Buffer.alloc(2 , iv.length + data.length);
+                    const encryptedData = Buffer.concat([tlsApplicationDataHeader, applicationDataLength, iv, data]);
                     tcpSocket.write(encryptedData, encoding, cb);
                 })
                 encryption.write(chunk,encoding,cb);
@@ -89,11 +72,11 @@ const createLikeARealTlsClient = function (host:string,port:number,options:likeA
             //replace back 
             if (status === connectionStatues.handshaking) {
                 const iv = data.subarray(tlsApplicationDataHeader.length + 1, tlsApplicationDataHeader.length + ivLength);
-                const decryption = createDecipheriv(algthroim, oneTimeEncryptKey, iv);
+                const decryption = createDecipheriv(algorithm, oneTimeEncryptKey, iv);
                 decryption.on('data', (decryptedData) => {
                     tlsHandshakeTransformer.emit('data',decryptedData);
                 })
-                decryption.write(data.subarray(tlsApplicationDataHeader.length + ivLength + 1, data.length));
+                decryption.write(data.subarray(tlsApplicationDataHeader.length + ivLength + 3, data.length));
             }
             else if(status === connectionStatues.connected) {
                 tlsHandshakeTransformer.emit('data', data);
