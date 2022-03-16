@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import * as tcp from 'net'
-import { activateLikeARealTlsServer, likeARealTlsOption } from ".";
+import { activateLikeARealTlsServer, likeARealTlsOption, createLikeARealTlsClient } from "./index.js";
 
 const tcpServer = tcp.createServer();
 tcpServer.listen(8443,'localhost');
@@ -16,3 +16,8 @@ const options:likeARealTlsOption = {
     fakeALPN:['h2', 'http/1.1'],
     tcpServer:tcpServer
 }
+activateLikeARealTlsServer(options);
+const tcpSocket = tcp.createConnection(8443,'localhost',()=>{
+    options.tcpSocket = tcpSocket;
+    createLikeARealTlsClient(options);
+})
