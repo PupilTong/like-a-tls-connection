@@ -4,7 +4,8 @@
   "description": " a fake tls connection layer with real tls behavior",
   "main": "dist/index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "start": "node dist/test.js"
   },
   "type": "module",
   "repository": {
