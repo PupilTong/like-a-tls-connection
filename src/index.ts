@@ -1,3 +1,3 @@
 export {createLikeARealTlsClient} from './client.js'
-export {activateLikeARealTlsServer} from './server.js'
-export { likeARealTlsOption } from './options.js'
+export {createLikeARealTlsServerSocket} from './server.js'
+export { likeARealTlsOption } from './common.js'
