@@ -13,11 +13,14 @@ const options:likeARealTlsOption = {
     cert:readFileSync('dist/cert/server.crt'),
     fakeALPN:['h2', 'http/1.1']
 }
-
-options.fakeDomain = 'www.apple.com'
-createLikeARealTlsClient(8443, 'localhost', options).then((tlsSocket)=>{
-    tlsSocket.write("hello");
-    tlsSocket.on('data',(data)=>{
-        console.log(data.toString('ascii'));
-    })
-});
+const tcpServer = tcp.createServer();
+tcpServer.listen(8443,'localhost');
+tcpServer.on('connection',(tcpSocket) =>{
+    createLikeARealTlsServerSocket(tcpSocket, options).then(tlsSocket=>{
+        tlsSocket.on('data',(data)=>{
+            console.log(data);
+        })
+        tlsSocket.write("world");
+    });
+    // tcpServer.emit('connection')
+})

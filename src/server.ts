@@ -1,111 +1,117 @@
-import * as tls from 'tls'
-import * as tcp from 'net'
-import { Transform } from "stream";
-import { likeARealTlsOption } from './options';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import log from 'standard-log'
-const logger = log.getLogger('server');
+import * as tls from "tls";
+import * as tcp from "net";
+import { Duplex, Transform } from "stream";
+import { likeARealTlsOption, encryptDataAndAppendFakeHeader, decryptDataAndRemoveFakeHeader } from "./common.js";
+import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import log from "standard-log";
+const logger = log.getLogger("server");
 
 // const fakeDomain  = 'www.microsoft.com';
 const debug = true;
-const activateLikeARealTlsServer = function(options:likeARealTlsOption){
-    const algorithm = options.algorithm;
-    const oneTimeEncryptKey = options.oneTimeEncryptKey;
-    const ivLength = options.ivLength;
-    const tlsApplicationDataHeader = options.tlsApplicationDataHeader;
-    const fakeDomain = options.fakeDomain
-    const ca = options.ca;
-    const cert = options.cert;
-    const key = options.key;
-    const tcpServer = options.tcpServer;
-    enum connectionStatues {
-        handshaking,
-        connected
-    }
-
-    tcpServer.on('connection',(socket)=>{
-        logger.info(`got a tcp connection : ${(socket.address() as tcp.AddressInfo)?.address}`)
+const createLikeARealTlsServerSocket = (
+    tcpSocketToClient: tcp.Socket,
+    options: likeARealTlsOption
+): Promise<tls.TLSSocket> => {
+    return new Promise<tls.TLSSocket>((resolve, reject) => {
+        const ca = options.ca;
+        const cert = options.cert;
+        const key = options.key;
+        const fakeDomain = options.fakeDomain;
+        const algorithm = options.algorithm;
+        const oneTimeEncryptKey = options.oneTimeEncryptKey;
+        const ivLength = options.ivLength;
+        const fakeHeader = options.tlsApplicationDataHeader;
+        enum connectionStatues {
+            handshaking,
+            connected,
+        }
         let status = connectionStatues.handshaking;
 
-        //forward all packets to Fake
-        const tcpSocketToFake = tcp.connect({
-            host:fakeDomain,
-            port:443
-        },()=>{
-            logger.info(`established tcp connection to ${fakeDomain}`)
-            socket.on('data',(data)=>{
-                if(status===connectionStatues.handshaking){
-                    tcpSocketToFake.write(data,(error)=>{
-                        logger.warn(`write to Fake server failed`)
-                        if(error)socket.emit('error',error);
-                    });
-                }
-            })
-            tcpSocketToFake.on('data',(data)=>{
-                if(status===connectionStatues.handshaking){
-                    socket.write(data,(error)=>{
-                        logger.warn(`write to client failed`)
-                        if(error)tcpSocketToFake.emit('error',error);
-                    });
-                }
-            })
-            tcpSocketToFake.on('end',()=>{
-                if(status===connectionStatues.handshaking){
-                    socket.end();
-                }
-            })
-        })
+        const createTcpSocketToFake = (domain: string, port: number): Promise<tcp.Socket> => {
+            return new Promise<tcp.Socket>((resolve, reject) => {
+                const tcpSocketToFake = tcp.connect({
+                    host: domain,
+                    port: port,
+                });
+                tcpSocketToFake.on("connect", () => {
+                    resolve(tcpSocketToFake);
+                });
+                tcpSocketToFake.on("error", (err) => {
+                    logger.error(`cannot connect to fake Server ${fakeDomain}, Error:${err}`);
+                    reject(tcpSocketToFake);
+                });
+            });
+        };
 
-        // const tcpTransFormerToReal = new Transform();
-        // // client ========> server
-        // socket.on('data',(data)=>{
-        //     if(status === connectionStatues.handshaking){
-        //         const maybeApplicationHeader = data.subarray(0,tlsApplicationDataHeader.length);
-        //         if(maybeApplicationHeader.compare(tlsApplicationDataHeader)===0){
-        //             const maybeIv = data.subarray(tlsApplicationDataHeader.length + 1, ivLength + tlsApplicationDataHeader.length + 1);
-        //             if(maybeIv.length === ivLength){
-        //                 const decryption = createDecipheriv(algorithm, oneTimeEncryptKey, maybeIv);
-        //                 decryption.on('data', (decryptedData) => {
-        //                     tcpTransFormerToReal.emit('data',decryptedData);
-        //                 })
-        //                 decryption.write(data.subarray(tlsApplicationDataHeader.length + ivLength + 3, data.length));
-        //             }
-        //         }
-        //     }
-        //     else if(status === connectionStatues.connected){
-        //         tcpTransFormerToReal.emit('data',data);
-        //     }
-        // })
-        
-        // //server =====> client
-        // tcpTransFormerToReal._transform = (chunk, encoding, cb)=>{
-        //     if(status === connectionStatues.handshaking){
-        //         //do replace
-        //         const iv = randomBytes(options.ivLength);
-        //         const encryption = createCipheriv(algorithm, oneTimeEncryptKey, iv);
-        //         encryption.on('data', (data) => {
-        //             const applicationDataLength = Buffer.alloc(2 , iv.length + data.length);
-        //             const encryptedData = Buffer.concat([tlsApplicationDataHeader, applicationDataLength, iv, data]);
-        //             socket.write(encryptedData);
-        //         })
-        //         encryption.write(chunk,encoding,cb);
-        //     }
-        //     else if(status === connectionStatues.connected){
-        //         socket.write(chunk,encoding,cb);
-        //     }
-        // };
-        // const realTlsSocket = new tls.TLSSocket(tcpTransFormerToReal as any,{
-        //     ca:ca,
-        //     cert:cert,
-        //     key:key,
-        //     ciphers:`ECDHE-ECDSA-AES256-GCM-SHA384`,
-        //     enableTrace:debug,
-        //     isServer:true
-        // })
-        // realTlsSocket.on('secureConnect',()=>{
-        //     status == connectionStatues.connected;
-        //     logger.info(`established a real connection client ${socket.address()}`)
-        // })
-    })
-}
-export {activateLikeARealTlsServer}
+
+        // tcpSocketToClient.on("connect", () => {
+        logger.info(`got a tcp connection : ${tcpSocketToClient.remoteAddress}:${tcpSocketToClient.remotePort}`);
+        createTcpSocketToFake(fakeDomain, 443).then((tcpSocketToFake) => {
+            const localStreamToTlsServer = new Transform();
+            const realTlsSocket = new tls.TLSSocket(localStreamToTlsServer as any, {
+                ca: ca,
+                cert: cert,
+                key: key,
+                ciphers: `ECDHE-ECDSA-AES256-GCM-SHA384`,
+                enableTrace: debug,
+                isServer: true,
+            });
+            tcpSocketToFake.on("data", (data) => {
+                // data from fake server
+                if (status === connectionStatues.handshaking) {
+                    tcpSocketToClient.write(data);
+                }
+            });
+
+            tcpSocketToClient.on("data", async (data) => {
+                // data from client
+                if (status === connectionStatues.handshaking && !(realTlsSocket.getFinished())) {
+                    decryptDataAndRemoveFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength)
+                    .then((decryptedData) => {
+                        logger.info(`received packet :${decryptedData.length} bytes`)
+                        localStreamToTlsServer.emit("data", decryptedData);
+                    },(err)=>{
+                        logger.info(`forwarded ${data.length} bytes to fake server, Error :${err}`)
+                        tcpSocketToFake.write(data);
+                    })
+                } else  {
+                    logger.info(`real tls connection established`);
+                    resolve(realTlsSocket);
+                    status = connectionStatues.connected;
+                    localStreamToTlsServer.emit("data", data);
+                }
+            });
+
+            localStreamToTlsServer._transform = (data, encoding, cb) => {
+                //data from tls server
+                if (status === connectionStatues.handshaking) {
+                    encryptDataAndAppendFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength)
+                    .then((encryptedData) => {
+                        tcpSocketToClient.write(encryptedData, encoding, cb);
+                    },(err)=>{
+                        logger.emergency(`err: ${err} : cannot encrypt data : ${data.toString('hex')}`)
+                    });
+                } else if (status === connectionStatues.connected) {
+                    tcpSocketToClient.write(data, encoding, cb);
+                }
+            };
+
+            //error handler
+            tcpSocketToFake.on('error',(err)=>{
+                if(status === connectionStatues.handshaking){
+                    tcpSocketToClient.emit('error',err);
+                }
+                else{
+                    logger.info(`socket to remote fake server closed : ${err}`)
+                }
+            });
+            tcpSocketToClient.on('error',(err)=>{
+                logger.emergency(`client socket error :${err}`);
+                tcpSocketToFake.destroy();
+                localStreamToTlsServer.emit('error', err);
+            })
+        });
+        // });
+    });
+};
+export { createLikeARealTlsServerSocket };
