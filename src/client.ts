@@ -18,6 +18,8 @@ const createLikeARealTlsClient = (port:number, host:string, options : likeARealT
         const algorithm = options.algorithm;
         const oneTimeEncryptKey = options.oneTimeEncryptKey;
         const ivLength = options.ivLength;
+        const aad = options.aad;
+        const authTagLength = options.authTagLength;
         enum connectionStatues {
             connectingFake,
             handshaking,
@@ -64,7 +66,6 @@ const createLikeARealTlsClient = (port:number, host:string, options : likeARealT
                     enableTrace: debug,
                     socket: tcpSocket,
                     rejectUnauthorized: true,
-                    ciphers: `ECDHE-ECDSA-AES256-GCM-SHA384`,
                 }, () => {
                     logger.info(`successfully connected to real remote`);
                     // realTlsSocket.removeAllListeners('error')
@@ -80,65 +81,73 @@ const createLikeARealTlsClient = (port:number, host:string, options : likeARealT
             const tcpMuxTransformForFake = new Transform();
             const tcpMuxTransformForReal = new Transform();
             tcpMuxTransformForFake._transform = (chunk,encoding,cb)=>{
+                tcpSocket.write(chunk,encoding,cb);
                 //fake tls  ====> tcp
-                if(status === connectionStatues.connectingFake){
-                    tcpSocket.write(chunk,encoding,cb);
-                }
-                else if (status === connectionStatues.handshaking){
-                    //do nothing
-                }
-                else if (status === connectionStatues.connected){
-                    // do nothing
-                }
+                // if(status === connectionStatues.connectingFake){
+                //     tcpSocket.write(chunk,encoding,cb);
+                // }
+                // else if (status === connectionStatues.handshaking){
+                //     //do nothing
+                // }
+                // else if (status === connectionStatues.connected){
+                //     // do nothing
+                // }
             }
             tcpMuxTransformForReal._transform = (chunk,encoding,cb)=>{
                 //real tls ====> tcp
-                if(status === connectionStatues.connectingFake){
-                    // do nothing
-                }
-                else if (status === connectionStatues.handshaking){
+                // if(status === connectionStatues.connectingFake){
+                //     // do nothing
+                // }
+                // else if (status === connectionStatues.handshaking){
                     encryptDataAndAppendFakeHeader(
                         chunk, 
                         tlsApplicationDataHeader, 
                         algorithm, 
                         oneTimeEncryptKey, 
-                        ivLength
+                        ivLength,
+                        aad,
+                        authTagLength
                     ).then(encryptedData=>{
-                        logger.info(`Sending Handshaking packet : ${encryptedData.length} bytes`)
+                        logger.info(`Sending encrypted packet : ${chunk.length} bytes`)
                         tcpSocket.write(encryptedData,encoding,cb);
                     })
-                }
-                else if (status === connectionStatues.connected){
-                    tcpSocket.write(chunk, encoding, cb);
-                }
+                // }
+                // else if (status === connectionStatues.connected){
+                //     tcpSocket.write(chunk, encoding, cb);
+                // }
             }
             tcpSocket.on('data',(data)=>{
                 //tcp =====> tls sockets
-                if(status === connectionStatues.connectingFake){
-                    tcpMuxTransformForFake.emit('data', data);
-                }
-                else if (status === connectionStatues.handshaking){
+                // if(status === connectionStatues.connectingFake){
+                    // tcpMuxTransformForFake.emit('data', data);
+                // }
+                // else if (status === connectionStatues.handshaking){
                     decryptDataAndRemoveFakeHeader(
                         data, 
                         tlsApplicationDataHeader, 
                         algorithm, 
                         oneTimeEncryptKey, 
-                        ivLength
+                        ivLength,
+                        aad,
+                        authTagLength
                     ).then(decryptedData=>{
                         if(typeof(decryptedData) != 'undefined'){
                             tcpMuxTransformForReal.emit('data', decryptedData);
                         }
+                    },err=>{
+                        logger.info(`decrypted failed : ${err}, forwarded to fake`)
+                        tcpMuxTransformForFake.emit('data', data);
                     })
-                }
-                else if (status === connectionStatues.connected){
-                    tcpMuxTransformForReal.emit('data', data)
-                }
+                // }
+                // else if (status === connectionStatues.connected){
+                    // tcpMuxTransformForReal.emit('data', data)
+                // }
             })
 
             doHandshakeToFake(fakeDomain,tcpMuxTransformForFake,fakeALPN).then(fakeTlsSocket=>{
                 status = connectionStatues.handshaking;
                 doRealHandshake(tcpMuxTransformForReal,ca).then(realTlsSocket=>{
-                    status = connectionStatues.connected;
+                    // status = connectionStatues.connected;
                     fakeTlsSocket.destroy();
                     resolve(realTlsSocket);
                 })

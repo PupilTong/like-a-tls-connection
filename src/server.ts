@@ -7,7 +7,7 @@ import log from "standard-log";
 const logger = log.getLogger("server");
 
 // const fakeDomain  = 'www.microsoft.com';
-const debug = true;
+const debug = false;
 const createLikeARealTlsServerSocket = (
     tcpSocketToClient: tcp.Socket,
     options: likeARealTlsOption
@@ -21,6 +21,8 @@ const createLikeARealTlsServerSocket = (
         const oneTimeEncryptKey = options.oneTimeEncryptKey;
         const ivLength = options.ivLength;
         const fakeHeader = options.tlsApplicationDataHeader;
+        const aad = options.aad;
+        const authTagLength = options.authTagLength;
         enum connectionStatues {
             handshaking,
             connected,
@@ -58,15 +60,16 @@ const createLikeARealTlsServerSocket = (
             });
             tcpSocketToFake.on("data", (data) => {
                 // data from fake server
-                if (status === connectionStatues.handshaking) {
+                // if (status === connectionStatues.handshaking) {
+                    logger.info(`forwarder from fake server ${data.length} bytes`)
                     tcpSocketToClient.write(data);
-                }
+                // }
             });
 
             tcpSocketToClient.on("data", async (data) => {
                 // data from client
-                if (status === connectionStatues.handshaking && !(realTlsSocket.getFinished())) {
-                    decryptDataAndRemoveFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength)
+                // if (status === connectionStatues.handshaking) {
+                    decryptDataAndRemoveFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength, aad, authTagLength)
                     .then((decryptedData) => {
                         logger.info(`received packet :${decryptedData.length} bytes`)
                         localStreamToTlsServer.emit("data", decryptedData);
@@ -74,42 +77,45 @@ const createLikeARealTlsServerSocket = (
                         logger.info(`forwarded ${data.length} bytes to fake server, Error :${err}`)
                         tcpSocketToFake.write(data);
                     })
-                } else  {
-                    logger.info(`real tls connection established`);
-                    resolve(realTlsSocket);
-                    status = connectionStatues.connected;
-                    localStreamToTlsServer.emit("data", data);
-                }
+                // } 
+                // else  {
+                //     logger.info(`real tls connection established`);
+                //     resolve(realTlsSocket);
+                //     // status = connectionStatues.connected;
+                //     localStreamToTlsServer.emit("data", data);
+                // }
             });
 
             localStreamToTlsServer._transform = (data, encoding, cb) => {
                 //data from tls server
-                if (status === connectionStatues.handshaking) {
-                    encryptDataAndAppendFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength)
+                // if (status === connectionStatues.handshaking) {
+                    encryptDataAndAppendFakeHeader(data, fakeHeader, algorithm, oneTimeEncryptKey, ivLength, aad, authTagLength)
                     .then((encryptedData) => {
+                        logger.info(`sending encrypted packet: ${data.length} bytes`)
                         tcpSocketToClient.write(encryptedData, encoding, cb);
                     },(err)=>{
                         logger.emergency(`err: ${err} : cannot encrypt data : ${data.toString('hex')}`)
                     });
-                } else if (status === connectionStatues.connected) {
-                    tcpSocketToClient.write(data, encoding, cb);
-                }
+                // } else if (status === connectionStatues.connected) {
+                    // tcpSocketToClient.write(data, encoding, cb);
+                // }
             };
 
             //error handler
             tcpSocketToFake.on('error',(err)=>{
-                if(status === connectionStatues.handshaking){
-                    tcpSocketToClient.emit('error',err);
-                }
-                else{
+                // if(status === connectionStatues.handshaking){
+                    // tcpSocketToClient.emit('error',err);
+                // }
+                // else{
                     logger.info(`socket to remote fake server closed : ${err}`)
-                }
+                // }
             });
             tcpSocketToClient.on('error',(err)=>{
                 logger.emergency(`client socket error :${err}`);
                 tcpSocketToFake.destroy();
                 localStreamToTlsServer.emit('error', err);
             })
+            resolve(realTlsSocket)
         });
         // });
     });
