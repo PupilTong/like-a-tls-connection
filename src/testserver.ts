@@ -3,15 +3,17 @@ import * as tcp from 'net'
 import { createLikeARealTlsServerSocket, likeARealTlsOption, createLikeARealTlsClient } from "./index.js";
 
 const options:likeARealTlsOption = {
-    oneTimeEncryptKey: "keykeykeykeykeykeykeykey",
+    oneTimeEncryptKey: "keyskeyskeyskeys",
     ivLength: 16,
-    algorithm: "aes-192-cfb",
+    algorithm: "aes-128-gcm",
     tlsApplicationDataHeader: Buffer.from([0x17,0x03,0x03]),
     fakeDomain: "61.147.221.19",
     ca:readFileSync('dist/cert/ca.crt'),
     key:readFileSync('dist/cert/server.key'),
     cert:readFileSync('dist/cert/server.crt'),
-    fakeALPN:['h2', 'http/1.1']
+    fakeALPN:['h2', 'http/1.1'],
+    aad: "this is aad",
+    authTagLength: 16
 }
 const tcpServer = tcp.createServer();
 tcpServer.listen(8443,'localhost');
