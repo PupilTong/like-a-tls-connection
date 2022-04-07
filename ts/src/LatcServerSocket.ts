@@ -2,9 +2,9 @@ import { Duplex, PassThrough, Readable, Writable, Transform } from "stream";
 import * as tls from "tls";
 import * as tcp from "net";
 import { count } from "console";
-import { Separator } from "./Separator";
-import { Mixer } from "./Mixer";
-import { TlsPacketParser } from "./TlsPacketParser";
+import { Separator } from "./Separator.js";
+import { Mixer } from "./Mixer.js";
+import { TlsPacketParser } from "./TlsPacketParser.js";
 class LatcServerSocket extends Duplex {
     private readonly inBond = new PassThrough({ objectMode: true });
     private readonly outBond = new PassThrough({ objectMode: true });
