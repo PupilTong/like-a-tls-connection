@@ -2,10 +2,10 @@ import { Transform, Duplex, TransformCallback, PassThrough } from "stream";
 import * as tls from "tls";
 import * as tcp from "net";
 import * as udp from "dgram";
-import { Separator } from "./Separator";
-import { Mixer } from "./Mixer";
-import { TlsPacketParser } from "./TlsPacketParser";
-import { StreamBridge } from "./StreamBridge";
+import { Separator } from "./Separator.js";
+import { Mixer } from "./Mixer.js";
+import { TlsPacketParser } from "./TlsPacketParser.js";
+import { StreamBridge } from "./StreamBridge.js";
 import { resolve } from "path";
 
 class LatcClientSocket extends Duplex {
