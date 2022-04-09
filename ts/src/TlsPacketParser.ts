@@ -1,8 +1,10 @@
-import internal, { Duplex, Stream, StreamOptions, Transform, TransformCallback } from "stream";
+import { Duplex, Stream, StreamOptions, Transform, TransformCallback } from "stream";
+import lodash from 'lodash'
 
 class TlsPacketParser extends Transform{
     private currentPacket:Buffer;
-    private currentCopiedBytes : number;
+    private currentCopiedBytes : number = 0;
+    private currentTlsHeader = Buffer.alloc(5);
     constructor(options? : StreamOptions<Duplex>){
         super({
             ...options,
@@ -11,26 +13,35 @@ class TlsPacketParser extends Transform{
         })
     }
     _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-        let toBeProcessedBytes = chunk.byteLength;
-        while(toBeProcessedBytes > 0){
+        let processedBytes = 0;
+        while(processedBytes < chunk.byteLength){
             let toBeCopiedLength = 0;
-            if(!this.currentPacket){
-                let packetLength = (chunk.at(3)<<8) | (chunk.at(4));
-                this.currentPacket = Buffer.alloc(packetLength);
-                toBeCopiedLength = (chunk.byteLength < this.currentPacket.byteLength) ? chunk.byteLength:this.currentPacket.byteLength;
+            if(this.currentCopiedBytes<5){
+                toBeCopiedLength = 5 - this.currentCopiedBytes;
             }
             else{
-                const notCopiedBytes = this.currentPacket.length - this.currentCopiedBytes;
-                toBeCopiedLength = (chunk.byteLength<notCopiedBytes)?chunk.byteLength: notCopiedBytes;
+                const packetLength = this.currentPacket.byteLength;
+                toBeCopiedLength = packetLength - this.currentCopiedBytes;
             }
-            chunk.copy(this.currentPacket, 0, 0, toBeCopiedLength);
+            const remainBytes = chunk.byteLength - processedBytes;
+            toBeCopiedLength = toBeCopiedLength< remainBytes?toBeCopiedLength:remainBytes;
+
+            let copyTarget = (!lodash.isUndefined(this.currentPacket))?this.currentPacket:this.currentTlsHeader;
+            chunk.copy(copyTarget, this.currentCopiedBytes, processedBytes, toBeCopiedLength);
+            processedBytes += toBeCopiedLength;
             this.currentCopiedBytes += toBeCopiedLength;
-            if(this.currentPacket.length === this.currentCopiedBytes){
+            
+            if(this.currentCopiedBytes == 5){
+                const packetLength = (this.currentTlsHeader[3]<<8) | (this.currentTlsHeader[4]) + 5;
+                this.currentPacket = Buffer.alloc(packetLength);
+                this.currentTlsHeader.copy(this.currentPacket);
+            }
+
+            if(!lodash.isUndefined(this.currentPacket) && this.currentPacket.byteLength == this.currentCopiedBytes){
                 this.push(this.currentPacket);
                 this.currentPacket = undefined;
                 this.currentCopiedBytes = 0;
             }
-            toBeProcessedBytes -= toBeCopiedLength;
         }
         callback();
     }

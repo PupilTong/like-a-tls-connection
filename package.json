@@ -4,7 +4,7 @@
   "description": " a fake tls connection layer with real tls behavior",
   "main": "dist/index.js",
   "scripts": {
-    "test": "mocha",
+    "test": "tsc --build && mocha",
     "start": "node dist/src/test.js"
   },
   "type": "module",
@@ -14,7 +14,7 @@
   },
   "keywords": [
     "tls",
-    "obfs",
+    "obfuscation",
     "tunnel"
   ],
   "author": "pupiltong",
@@ -24,13 +24,24 @@
   },
   "homepage": "https://github.com/PupilTong/like-a-tls-connection#readme",
   "devDependencies": {
+    "@types/lodash": "^4.14.181",
+    "@types/mocha": "^9.1.0",
     "@types/node": "^17.0.21",
     "mocha": "^9.2.2",
+    "nyc": "^15.1.0",
     "should": "^13.2.3",
+    "ts-node": "^10.7.0",
     "typescript": "^4.6.3"
   },
   "dependencies": {
-    "@types/mocha": "^9.1.0",
+    "lodash": "^4.17.21",
     "standard-log": "^6.2.6"
+  },
+  "mocha": {
+    "extension": "ts",
+    "require": [
+      "ts-node/register"
+    ],
+    "spec": "dist/tests/*.js"
   }
 }
