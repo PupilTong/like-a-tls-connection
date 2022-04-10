@@ -13,6 +13,7 @@ class TlsPacketParser extends Transform{
         })
     }
     _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
+        if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
         let processedBytes = 0;
         while(processedBytes < chunk.byteLength){
             let toBeCopiedLength = 0;

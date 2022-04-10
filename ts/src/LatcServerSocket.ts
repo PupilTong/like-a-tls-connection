@@ -5,6 +5,7 @@ import { count } from "console";
 import { Separator } from "./Separator.js";
 import { Mixer } from "./Mixer.js";
 import { TlsPacketParser } from "./TlsPacketParser.js";
+import lodash from "lodash";
 class LatcServerSocket extends Duplex {
     private readonly inBond = new PassThrough({ objectMode: true });
     private readonly outBond = new PassThrough({ objectMode: true });
@@ -32,16 +33,50 @@ class LatcServerSocket extends Duplex {
         this.mixer = new Mixer(hmacAlgorithm, salt, this.outBond, this.toFakeServerSocket);
         this.mixer.pipe(toClientSocket);
 
-        this.toClientSocket.pipe(this.packetParser);
         this.separator = new Separator(this.hmacAlgorithm, this.salt, this.inBond, this.toFakeServerSocket);
+        this.toClientSocket.pipe(this.packetParser);
         this.packetParser.pipe(this.separator);
 
-        this.inBond.on("data", (chunk) => {
-            this.push(chunk);
-        });
+        // this.inBond.on("data", (chunk) => {
+        //     this.push(chunk);
+        // });
+        this.inBond.pause();
+
+        this.toClientSocket.on('error', err=>{
+            err.name = `To Client Tcp Socket Error : ${err.name}`
+            this.emit('error', err);
+        })
+        this.toClientSocket.on('close',()=>{
+            this.destroy();
+        })
+        this.toFakeServerSocket.on('error', err=>{
+            err.name = `To Fake Server Tcp Socket Error : ${err.name}`
+            this.emit('error', err);
+        })
+        this.toFakeServerSocket.on('close',()=>{
+            this.destroy();
+        })
     }
-    _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error) => void): void {
+    _write(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error) => void): void {
+        if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
         this.outBond.write(chunk, encoding, callback);
+    }
+    _destroy(error: Error, callback: (error: Error) => void): void {
+        try{
+            this.mixer.destroy(error);
+            this.separator.destroy(error);
+            this.packetParser.destroy(error);
+            this.inBond.destroy(error);
+            this.outBond.destroy(error);
+            this.toFakeServerSocket.destroy(error);
+            this.toClientSocket.destroy(error);
+        }
+        catch(e){
+            callback(e);
+        }
+    }
+    _read(size: number): void {
+        this.push(this.inBond.read(size));
     }
 }
 function createServerSocket(

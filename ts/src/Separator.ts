@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
-import internal, { Readable, StreamOptions, Writable } from "stream";
-import * as udp from 'dgram'
+import { Readable, StreamOptions, Writable } from "stream";
+import lodash from "lodash";
 
 
 class Separator extends Writable {
@@ -66,6 +66,7 @@ class Separator extends Writable {
         encoding: BufferEncoding,
         callback: (error?: Error) => void,
     ): void {
+        if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
         this.verifyAndGetRawPacket(
             chunk,
             (data) => {
@@ -85,14 +86,6 @@ class Separator extends Writable {
                 }
             },
         );
-    }
-    _destroy(error: Error, callback: (error?: Error) => void): void {
-        try {
-            this.labeledPacketStream.destroy(error);
-            this.unlabeledPacketStream.destroy(error);
-        } catch (e) {
-            callback(e);
-        }
     }
     getLabeledPacketStream(){
         return this.labeledPacketStream;
