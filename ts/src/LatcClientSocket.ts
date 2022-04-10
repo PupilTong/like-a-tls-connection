@@ -6,7 +6,7 @@ import { Separator } from "./Separator.js";
 import { Mixer } from "./Mixer.js";
 import { TlsPacketParser } from "./TlsPacketParser.js";
 import { StreamBridge } from "./StreamBridge.js";
-import { resolve } from "path";
+import lodash from "lodash";
 
 class LatcClientSocket extends Duplex {
     private readonly hmacAlgorithm: "sha256" | "sha512";
@@ -43,13 +43,23 @@ class LatcClientSocket extends Duplex {
         this.packetParser.pipe(this.separator);
         this.externalConnectionSocket.pipe(this.packetParser);
 
-        this.fakeTlsSocket = new tls.TLSSocket(this.toFakeTlsBridge.socket1 as tcp.Socket, fakeTlsSocketOption);
-
+        this.fakeTlsSocket = tls.connect({
+            ...fakeTlsSocketOption,
+            socket: this.toFakeTlsBridge.socket1,
+        });
         this.receivedLabeledStream.on("data", (chunk) => {
             this.push(chunk);
         });
+        this.externalConnectionSocket.on('error', err=>{
+            err.name = `Client Tcp Socket Error : ${err.name}`
+            this.emit('error', err);
+        })
+        this.externalConnectionSocket.on('close', ()=>{
+            this.destroy();
+        })
     }
-    _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error) => void): void {
+    _write(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error) => void): void {
+        if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
         this.toBeLabeledStream.write(chunk, encoding, callback);
     }
     _destroy(error: Error, callback: (error: Error) => void): void {
@@ -57,6 +67,11 @@ class LatcClientSocket extends Duplex {
             this.separator.destroy(error);
             this.mixer.destroy(error);
             this.packetParser.destroy(error);
+            this.toBeLabeledStream.destroy(error);
+            this.receivedLabeledStream.destroy(error);
+            this.toFakeTlsBridge.destroy();
+            this.externalConnectionSocket.destroy(error);
+            this.fakeTlsSocket.destroy(error);
         } catch (e) {
             callback(e);
         }
@@ -75,10 +90,10 @@ function createClientSocket(
     salt: string | Buffer,
     fakeTlsSocketOption?: tls.ConnectionOptions
 ): Promise<LatcClientSocket> {
-    return new Promise((resolve, reject)=>{
-        const tcpSocket = tcp.createConnection(port, host,()=>{
-            resolve(new LatcClientSocket(hmacAlgorithm,salt, tcpSocket, fakeTlsSocketOption))
-        })
-    })
+    return new Promise((resolve, reject) => {
+        const tcpSocket = tcp.createConnection(port, host, () => {
+            resolve(new LatcClientSocket(hmacAlgorithm, salt, tcpSocket, fakeTlsSocketOption));
+        });
+    });
 }
 export { createClientSocket, LatcClientSocket };

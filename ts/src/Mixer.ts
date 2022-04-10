@@ -1,5 +1,6 @@
 
 import { createHmac } from 'crypto';
+import lodash from 'lodash';
 import * as tcp from 'net'
 import { Duplex, PassThrough, Readable, StreamOptions, Transform } from 'stream';
 class Mixer extends PassThrough implements Readable {
@@ -23,12 +24,14 @@ class Mixer extends PassThrough implements Readable {
         });
         this.algorithm = algorithm;
         this.salt = salt;
-        this.tlsApplicationPacketHeader = tlsApplicationPacketHeader
+        tlsApplicationPacketHeader = !lodash.isUndefined(tlsApplicationPacketHeader)
             ? tlsApplicationPacketHeader
             : Buffer.from([0x17, 0x03, 0x03]);
+        this.tlsApplicationPacketHeader = tlsApplicationPacketHeader;
         this.passThroughPacket = passThroughPacket;
         this.labeledPacket = new Transform({
             transform:function(chunk,encoding,cb){
+                if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
                 const hmac = createHmac(algorithm, salt);
                 const hashedPacket = hmac.update(chunk).digest();
                 const applicationPacketLength = chunk.byteLength + hashedPacket.byteLength;
