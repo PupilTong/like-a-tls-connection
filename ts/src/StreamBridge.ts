@@ -7,11 +7,27 @@ class StreamBridge{
         const socket0 = new Transform();
         const socket1 = new Transform();
         socket0._transform = (chunk, encoding, cb)=>{
-            socket1.emit('data',chunk);
+            if(!socket1.push(chunk,encoding)){
+                socket1.pause();
+            }
         }
         socket1._transform = (chunk, encoding, cb)=>{
-            socket0.emit('data', chunk);
+            if(!socket0.push(chunk,encoding)){
+                socket0.pause();
+            }
         }
+        socket0._read = ()=>{
+            socket1.resume();
+        }
+        socket1._read = ()=>{
+            socket0.resume();
+        }
+        socket0.on('end',()=>{
+            socket1.end();
+        })
+        socket1.on('end',()=>{
+            socket0.end();
+        })
         socket0._destroy = (err)=>{
             socket1.destroy(err);
         }

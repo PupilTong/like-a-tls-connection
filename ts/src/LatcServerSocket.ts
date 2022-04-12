@@ -37,10 +37,11 @@ class LatcServerSocket extends Duplex {
         this.toClientSocket.pipe(this.packetParser);
         this.packetParser.pipe(this.separator);
 
-        // this.inBond.on("data", (chunk) => {
-        //     this.push(chunk);
-        // });
-        this.inBond.pause();
+        this.inBond.on("data", (chunk) => {
+            if(!this.push(chunk)){
+                this.inBond.pause();
+            }
+        });
 
         this.toClientSocket.on('error', err=>{
             err.name = `To Client Tcp Socket Error : ${err.name}`
@@ -76,7 +77,7 @@ class LatcServerSocket extends Duplex {
         }
     }
     _read(size: number): void {
-        this.push(this.inBond.read(size));
+        this.inBond.resume();
     }
 }
 function createServerSocket(
