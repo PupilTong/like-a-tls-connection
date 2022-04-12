@@ -48,7 +48,9 @@ class LatcClientSocket extends Duplex {
             socket: this.toFakeTlsBridge.socket1,
         });
         this.receivedLabeledStream.on("data", (chunk) => {
-            this.push(chunk);
+            if(!this.push(chunk)){
+                this.receivedLabeledStream.pause();
+            }
         });
         this.externalConnectionSocket.on('error', err=>{
             err.name = `Client Tcp Socket Error : ${err.name}`
@@ -75,6 +77,9 @@ class LatcClientSocket extends Duplex {
         } catch (e) {
             callback(e);
         }
+    }
+    _read(size: number): void {
+        this.receivedLabeledStream.resume();
     }
     getHmacAlgorithm() {
         return this.hmacAlgorithm;

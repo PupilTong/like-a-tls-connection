@@ -2,7 +2,6 @@ import * as tcp from 'net'
 import * as tls from 'tls'
 import { createServerSocket, LatcServerSocket } from '../src/LatcServerSocket.js'
 import { createClientSocket, LatcClientSocket } from '../src/LatcClientSocket.js'
-import { before } from 'mocha';
 import should from 'should';
 describe("Test Latc",()=>{
     let tcpServer : tcp.Server;
@@ -40,7 +39,8 @@ describe("Test Latc",()=>{
     })
 
 
-    it("request fake server cert",(done)=>{
+    it("request fake server cert",function(done){
+        this.timeout(5000);
         tcpServer.on('connection',(serverSocket)=>{
             createServerSocket(serverSocket,443,fakeName,"sha256","salt").then(server=>{
             })
@@ -48,11 +48,13 @@ describe("Test Latc",()=>{
         createClientSocket(2222,'127.0.0.1',"sha256","salt",{
             servername:fakeName,
             rejectUnauthorized:true,
-        }).then(client=>{
-            const cert = client.getFakeTlsSocket().getPeerCertificate();
-            // console.log(tls.checkServerIdentity(fakeName, cert as any));
-            // client.destroy();
-            // done();
+            enableTrace:true,
+            checkServerIdentity:(hostname,cert)=>{
+                const result = tls.checkServerIdentity(hostname, cert);
+                should.equal(result,undefined);
+                done();
+                return result;
+            }
         });
     })
 
