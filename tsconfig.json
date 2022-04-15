@@ -11,8 +11,9 @@
       "typeRoots": ["./node_modules/@types"],
       "outDir": "./dist",
       "declaration": true,
-      "allowSyntheticDefaultImports": true
+      "allowSyntheticDefaultImports": true,
+      "experimentalDecorators": true
     },
-    "include": ["ts"],
-    // "exclude": ["node_modules", "**/*.spec.ts", "./dist/*","./build/*"],
+    "include": ["src", "test"],
+    "exclude": ["node_modules"],
 }

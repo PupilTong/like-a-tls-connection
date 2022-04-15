@@ -28,7 +28,7 @@ class TlsPacketParser extends Transform{
             toBeCopiedLength = toBeCopiedLength< remainBytes?toBeCopiedLength:remainBytes;
 
             let copyTarget = (!lodash.isUndefined(this.currentPacket))?this.currentPacket:this.currentTlsHeader;
-            chunk.copy(copyTarget, this.currentCopiedBytes, processedBytes, toBeCopiedLength);
+            chunk.copy(copyTarget, this.currentCopiedBytes, processedBytes, processedBytes + toBeCopiedLength);
             processedBytes += toBeCopiedLength;
             this.currentCopiedBytes += toBeCopiedLength;
             

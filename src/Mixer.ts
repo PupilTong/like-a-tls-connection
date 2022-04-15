@@ -7,8 +7,9 @@ class Mixer extends PassThrough implements Readable {
     protected tlsApplicationPacketHeader: Buffer;
     protected readonly algorithm: string;
     protected salt: string | Buffer;
-    private readonly labeledPacket: PassThrough;
+    private readonly toBeLabeledPacket : Readable;
     private readonly passThroughPacket: Readable;
+    private readonly packetLabeler: PassThrough;
     constructor(
         algorithm: "sha256" | "sha512",
         salt: string | Buffer,
@@ -29,7 +30,8 @@ class Mixer extends PassThrough implements Readable {
             : Buffer.from([0x17, 0x03, 0x03]);
         this.tlsApplicationPacketHeader = tlsApplicationPacketHeader;
         this.passThroughPacket = passThroughPacket;
-        this.labeledPacket = new Transform({
+        this.toBeLabeledPacket = toBeLabeledPacket;
+        this.packetLabeler = new Transform({
             transform:function(chunk,encoding,cb){
                 if(!lodash.isBuffer(chunk))chunk = Buffer.from(chunk as unknown as string, encoding);
                 const hmac = createHmac(algorithm, salt);
@@ -50,9 +52,15 @@ class Mixer extends PassThrough implements Readable {
             },
             objectMode:true
         });
-        toBeLabeledPacket.pipe(this.labeledPacket);
-        this.labeledPacket.pipe(this);
+        toBeLabeledPacket.pipe(this.packetLabeler);
+        this.packetLabeler.pipe(this);
         this.passThroughPacket.pipe(this);
+    }
+    getToBeLabeledPacketStream(): Readable {
+        return this.toBeLabeledPacket;
+    }
+    getPassthroughPacketStream(): Readable {
+        return this.passThroughPacket;
     }
 }
 export {Mixer}

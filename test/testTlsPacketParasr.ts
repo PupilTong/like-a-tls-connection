@@ -1,5 +1,9 @@
 import { TlsPacketParser } from "../src/TlsPacketParser.js";
 import should from 'should'
+import * as tcp from 'net'
+import * as tls from 'tls'
+import { Duplex, PassThrough } from "stream";
+import { isNull } from "lodash";
 describe("Test Tls PacketParser",()=>{
     let parser : TlsPacketParser;
     beforeEach(()=>{
@@ -71,6 +75,37 @@ describe("Test Tls PacketParser",()=>{
                 parser.write(Buffer.from([value]))
             })
         }
+    })
+    it("test Interoperability with tls",function(done){
+        this.timeout(5000);
+        const hostName = "nodejs.org"
+        const tcpSocket = tcp.connect({
+            host:hostName,
+            port:443
+        },()=>{
+            const writeToSocket = new PassThrough();
+            const readFromSocket = new PassThrough();
+            tcpSocket.pipe(parser);
+            parser.pipe(readFromSocket);
+            writeToSocket.pipe(tcpSocket);
+            const tcpBridge = Duplex.from({
+                writable: writeToSocket,
+                readable: readFromSocket
+            });
+            const tlsSocket = tls.connect({
+                socket:tcpBridge,
+                checkServerIdentity:(host,cert)=>{
+                    const isValid = tls.checkServerIdentity(hostName, cert);
+                    should.equal(isValid, null);
+                    done();
+                    tlsSocket.destroy();
+                    return isValid;
+                },
+                timeout:3000
+            });
+            tlsSocket.on('error',(err)=>{
+            })
+        })
     })
     afterEach(()=>{
         parser.destroy();
