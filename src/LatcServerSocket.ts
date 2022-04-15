@@ -22,7 +22,7 @@ class LatcServerSocket extends Duplex {
         hmacAlgorithm: "sha256" | "sha512",
         salt: string | Buffer,
         toClientSocket: Duplex,
-        toFakeServerSocket: Duplex
+        toFakeServerSocket: Duplex,
     ) {
         super({ objectMode: true });
         this.hmacAlgorithm = hmacAlgorithm;
@@ -52,7 +52,7 @@ class LatcServerSocket extends Duplex {
         })
         this.toFakeServerSocket.on('error', err=>{
             err.name = `To Fake Server Tcp Socket Error : ${err.name}`
-            this.emit('error', err);
+            this.emit('error',err);
         })
         this.toFakeServerSocket.on('close',()=>{
             this.destroy();
@@ -64,13 +64,8 @@ class LatcServerSocket extends Duplex {
     }
     _destroy(error: Error, callback: (error: Error) => void): void {
         try{
-            this.mixer.destroy(error);
-            this.separator.destroy(error);
-            this.packetParser.destroy(error);
-            this.inBond.destroy(error);
-            this.outBond.destroy(error);
-            this.toFakeServerSocket.destroy(error);
-            this.toClientSocket.destroy(error);
+            this.toFakeServerSocket.destroy();
+            this.toClientSocket.destroy();
         }
         catch(e){
             callback(e);
