@@ -5,14 +5,14 @@ import { createClientSocket } from '../src/LatcClientSocket.js'
 import should from 'should';
 describe("Test Latc",()=>{
     let tcpServer : tcp.Server;
-    const fakeName  = "cn.bing.com";
-    beforeEach(async ()=>{
+    const fakeName  = "www.icloud.com";
+    beforeEach(function(){
         tcpServer = new tcp.Server();
         tcpServer.listen(2222,'127.0.0.1');
+        this.timeout(6000);
     })
 
     it("request fake server cert",function(done){
-        this.timeout(5000);
         tcpServer.once('connection',(serverSocket)=>{
             createServerSocket(serverSocket,443,fakeName,"sha256","salt").then(server=>{
             })
