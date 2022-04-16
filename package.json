@@ -1,11 +1,11 @@
 {
   "name": "like-a-tls-connection",
-  "version": "0.0.0",
-  "description": " a fake tls connection layer with real tls behavior",
+  "version": "0.0.1",
+  "description": "hiding a connection under a tls connection",
   "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
-    "test": "tsc --build && mocha",
-    "start": "node dist/src/test.js"
+    "test": "tsc --build && mocha"
   },
   "type": "module",
   "repository": {
@@ -18,7 +18,7 @@
     "tunnel"
   ],
   "author": "pupiltong",
-  "license": "AGPL-3.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/PupilTong/like-a-tls-connection/issues"
   },
@@ -37,11 +37,13 @@
     "typescript": "^4.6.3"
   },
   "dependencies": {
-    "lodash": "^4.17.21",
-    "standard-log": "^6.2.6"
+    "lodash": "^4.17.21"
   },
   "directories": {
     "src" : "src",
     "test": "test"
-  }
+  },
+  "files": [
+    "dist/src/*"
+  ]
 }
