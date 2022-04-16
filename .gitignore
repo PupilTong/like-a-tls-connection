@@ -1,7 +1,0 @@
-/build/
-*node_modules*
-index.json
-.nyc_output
-/coverage
-.vscode
-/dist/*
