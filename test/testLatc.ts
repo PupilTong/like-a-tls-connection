@@ -31,7 +31,7 @@ describe("Test Latc",()=>{
             socket.on('error',()=>{});
             socket.destroy();
         });
-    })
+    });
 
 
     it("client to server",(done)=>{
@@ -53,7 +53,17 @@ describe("Test Latc",()=>{
             client.write(msg);
             client.destroy();
         });
-    })
+    });
+
+    
+    it("catch an error while creating client",function(done){
+        createClientSocket(54321,'127.0.0.1',"sha256","salt",{
+            servername:fakeName,
+            rejectUnauthorized:true,
+        }).catch(e=>{
+            done();
+        })
+    });
     
     afterEach(()=>{
         tcpServer.close();
