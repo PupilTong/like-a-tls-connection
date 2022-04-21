@@ -76,7 +76,17 @@ describe("Test Latc", () => {
 
     it("server emitted close", (done) => {
         tcpServer.on("connection", (serverSocket) => {
-            serverSocket.end();
+            createServerSocket(
+                serverSocket,
+                443,
+                fakeName,
+                "sha256",
+                "salt",
+            ).then((server) => {
+                server.once("data", (data) => {
+                    server.destroy();
+                });
+            });
         });
         createClientSocket(2222, "127.0.0.1", "sha256", "salt", {
             servername: fakeName,
@@ -84,7 +94,8 @@ describe("Test Latc", () => {
         }).then((client) => {
             client.once('close',()=>{
                 done();
-            })
+            });
+            client.write('hello');
         });
     });
     afterEach(() => {

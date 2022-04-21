@@ -110,8 +110,12 @@ function createClientSocket(
                         tcpSocket.on("error", (err) => {
                             latcClientSocket.destroy(err);
                         });
+                        tcpSocket.removeAllListeners("end");
+                        tcpSocket.on('end',()=>{
+                            latcClientSocket.destroy();
+                        })
+                        tcpSocket.removeAllListeners("close");
                         tcpSocket.on('close',(hadErr)=>{
-                            console.log("close")
                             latcClientSocket.destroy();
                         })
                         fakeTlsSocket.on("error", (err) => {
@@ -124,6 +128,9 @@ function createClientSocket(
             tcpSocket.once("error", (e) => {
                 reject(e);
             });
+            tcpSocket.once('close',()=>{
+                reject(new Error(`tcp socket closed very early`));
+            })
         } catch (e) {
             reject(e);
         }
