@@ -101,6 +101,7 @@ function createClientSocket(
                                 receivedLabeledStream.destroy();
                                 receivedPassThroughStream.destroy();
                                 packetParser.destroy();
+                                cb(null);
                             } catch (e) {
                                 cb(e);
                             }
@@ -109,6 +110,10 @@ function createClientSocket(
                         tcpSocket.on("error", (err) => {
                             latcClientSocket.destroy(err);
                         });
+                        tcpSocket.on('close',(hadErr)=>{
+                            console.log("close")
+                            latcClientSocket.destroy();
+                        })
                         fakeTlsSocket.on("error", (err) => {
                             latcClientSocket.destroy(err);
                         });
