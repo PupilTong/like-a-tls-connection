@@ -101,6 +101,7 @@ function createClientSocket(
                                 receivedLabeledStream.destroy();
                                 receivedPassThroughStream.destroy();
                                 packetParser.destroy();
+                                cb(null);
                             } catch (e) {
                                 cb(e);
                             }
@@ -109,6 +110,14 @@ function createClientSocket(
                         tcpSocket.on("error", (err) => {
                             latcClientSocket.destroy(err);
                         });
+                        tcpSocket.removeAllListeners("end");
+                        tcpSocket.on('end',()=>{
+                            latcClientSocket.destroy();
+                        })
+                        tcpSocket.removeAllListeners("close");
+                        tcpSocket.on('close',(hadErr)=>{
+                            latcClientSocket.destroy();
+                        })
                         fakeTlsSocket.on("error", (err) => {
                             latcClientSocket.destroy(err);
                         });
@@ -119,6 +128,9 @@ function createClientSocket(
             tcpSocket.once("error", (e) => {
                 reject(e);
             });
+            tcpSocket.once('close',()=>{
+                reject(new Error(`tcp socket closed very early`));
+            })
         } catch (e) {
             reject(e);
         }
