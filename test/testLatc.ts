@@ -98,6 +98,28 @@ describe("Test Latc", () => {
             client.write('hello');
         });
     });
+    
+    it("client emitted close", (done) => {
+        tcpServer.on("connection", (serverSocket) => {
+            createServerSocket(
+                serverSocket,
+                443,
+                fakeName,
+                "sha256",
+                "salt",
+            ).then((server) => {
+                server.on('close',()=>{
+                    done();
+                })
+            });
+        });
+        createClientSocket(2222, "127.0.0.1", "sha256", "salt", {
+            servername: fakeName,
+            rejectUnauthorized: true,
+        }).then((client) => {
+            client.destroy();
+        });
+    });
     afterEach(() => {
         tcpServer.close();
     });

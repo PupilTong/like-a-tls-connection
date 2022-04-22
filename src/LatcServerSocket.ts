@@ -45,14 +45,14 @@ class LatcServerSocket extends Duplex {
 
         this.toClientSocket.on('error', err=>{
             err.name = `To Client Tcp Socket Error : ${err.name}`
-            this.emit('error', err);
+            this.destroy(err);
         })
         this.toClientSocket.on('close',()=>{
             this.destroy();
         })
         this.toFakeServerSocket.on('error', err=>{
             err.name = `To Fake Server Tcp Socket Error : ${err.name}`
-            this.emit('error',err);
+            this.destroy(err)
         })
         this.toFakeServerSocket.on('close',()=>{
             this.destroy();
@@ -66,6 +66,11 @@ class LatcServerSocket extends Duplex {
         try{
             this.toFakeServerSocket.destroy();
             this.toClientSocket.destroy();
+            this.mixer.destroy();
+            this.separator.destroy();
+            this.packetParser.destroy();
+            this.inBond.destroy();
+            this.outBond.destroy();
         }
         catch(e){
             callback(e);
