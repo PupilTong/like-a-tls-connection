@@ -71,6 +71,7 @@ class LatcServerSocket extends Duplex {
             this.packetParser.destroy();
             this.inBond.destroy();
             this.outBond.destroy();
+            callback(null);
         }
         catch(e){
             callback(e);
