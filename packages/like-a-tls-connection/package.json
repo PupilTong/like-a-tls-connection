@@ -1,12 +1,12 @@
 {
   "name": "like-a-tls-connection",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "hiding a connection under a tls connection",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "scripts": {
     "test": "tsc --build && mocha",
-    "build" : "npx tsc --build"
+    "build": "npx tsc --build"
   },
   "engines": {
     "node": ">16.8.0"
@@ -44,7 +44,7 @@
     "lodash": "^4.17.21"
   },
   "directories": {
-    "src" : "src",
+    "src": "src",
     "test": "test"
   },
   "files": [
