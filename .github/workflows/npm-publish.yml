@@ -39,3 +39,4 @@ jobs:
         with:
           title: "chore: Release ${{ steps.date.outputs.date }}"
           publish: "pnpm -r publish"
+          createGithubReleases: true
