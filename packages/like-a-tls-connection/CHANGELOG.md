@@ -1,5 +1,11 @@
 # like-a-tls-connection
 
+## 0.0.11
+
+### Patch Changes
+
+- 9eacb73: feat: move to node 20
+
 ## 0.0.10
 
 ### Patch Changes
