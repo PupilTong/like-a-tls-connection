@@ -1,37 +1,41 @@
 # This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
 # For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
 
-name: Node.js Package
+name: publish
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: ["main"]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 16
-      - run: npm ci
-      - run: sudo npm test
-
   publish-npm:
-    needs: build
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: read
+    steps:      
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
-          registry-url: https://registry.npmjs.org/
-      - run: npm ci
-      - run: npm run build
-      - run: git config --global user.email "pupiltong@outlook.com"
-      - run: git config --global user.name "pupilTong"
-      - run: npm version ${{github.event.release.tag_name}} 
-      - run: npm publish
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: prepare-env
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: build
+        run: |
+          pnpm -r build
+          pnpm -r test
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date -u +'%Y-%m-%d %H:%M:%S')"
+      - name: update changeset pr
+        uses: changesets/action@v1
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        with:
+          title: "chore: Release ${{ steps.date.outputs.date }}"
+          publish: "pnpm -r publish"
