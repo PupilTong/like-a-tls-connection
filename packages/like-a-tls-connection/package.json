@@ -1,6 +1,6 @@
 {
   "name": "like-a-tls-connection",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "hiding a connection under a tls connection",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
