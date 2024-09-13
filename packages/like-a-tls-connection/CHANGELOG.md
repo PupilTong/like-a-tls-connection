@@ -1,5 +1,11 @@
 # like-a-tls-connection
 
+## 0.0.10
+
+### Patch Changes
+
+- 6a08f83: chore: try to create github release automaticlly
+
 ## 0.0.9
 
 ### Patch Changes
