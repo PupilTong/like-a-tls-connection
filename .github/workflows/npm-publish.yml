@@ -38,5 +38,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
         with:
           title: "chore: Release ${{ steps.date.outputs.date }}"
-          publish: "pnpm -r publish"
-          createGithubReleases: true
+          publish: pnpm --filter like-a-tls-connection publish
