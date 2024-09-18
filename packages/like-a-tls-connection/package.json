@@ -4,6 +4,7 @@
   "description": "hiding a connection under a tls connection",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "private": false,
   "scripts": {
     "test": "tsc --build && mocha",
     "build": "npx tsc --build"
