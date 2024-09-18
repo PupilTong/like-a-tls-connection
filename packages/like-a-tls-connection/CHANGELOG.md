@@ -1,5 +1,11 @@
 # like-a-tls-connection
 
+## 0.0.12
+
+### Patch Changes
+
+- 4ec8886: fix: minor fix
+
 ## 0.0.11
 
 ### Patch Changes
