@@ -1,28 +1,27 @@
 {
-    "name": "zoned-dns",
-    "version": "0.0.0",
-    "description": "",
-    "private": true,
-    "main": "index.js",
-    "scripts": {
-    },
-    "type": "module",
-    "author": "pupiltong",
-    "license": "Apache-2.0",
-    "devDependencies": {
-      "@types/dns-packet": "^5.2.4",
-      "@types/geoip-country": "^4.0.0",
-      "@types/jmespath": "^0.15.0",
-      "@types/node": "^17.0.21",
-      "@types/promise.any": "^2.0.0"
-    },
-    "dependencies": {
-      "@theredhead/core-functions": "^1.0.7",
-      "dns-packet": "^5.3.1",
-      "geoip-country": "^4.0.109",
-      "jmespath": "^0.16.0",
-      "node-fetch": "^3.2.0",
-      "promise.any": "^2.0.3",
-      "search.ts": "^2.0.1"
-    }
+  "name": "zoned-dns",
+  "version": "0.0.1",
+  "description": "",
+  "private": true,
+  "main": "index.js",
+  "scripts": {},
+  "type": "module",
+  "author": "pupiltong",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/dns-packet": "^5.2.4",
+    "@types/geoip-country": "^4.0.0",
+    "@types/jmespath": "^0.15.0",
+    "@types/node": "^17.0.21",
+    "@types/promise.any": "^2.0.0"
+  },
+  "dependencies": {
+    "@theredhead/core-functions": "^1.0.7",
+    "dns-packet": "^5.3.1",
+    "geoip-country": "^4.0.109",
+    "jmespath": "^0.16.0",
+    "node-fetch": "^3.2.0",
+    "promise.any": "^2.0.3",
+    "search.ts": "^2.0.1"
   }
+}

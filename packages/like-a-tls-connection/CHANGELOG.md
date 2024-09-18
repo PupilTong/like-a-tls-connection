@@ -1,5 +1,11 @@
 # like-a-tls-connection
 
+## 0.0.12
+
+### Patch Changes
+
+- 213e66d: fix: minor fix
+
 ## 0.0.11
 
 ### Patch Changes
